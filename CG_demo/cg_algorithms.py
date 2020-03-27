@@ -17,6 +17,8 @@ def draw_line(p_list, algorithm):
     result = []
     if algorithm == 'Naive':
         if x0 == x1:
+            if y0 > y1:
+                x0, y0, x1, y1 = x1, y1, x0, y0
             for y in range(y0, y1 + 1):
                 result.append((x0, y))
         else:
@@ -26,9 +28,75 @@ def draw_line(p_list, algorithm):
             for x in range(x0, x1 + 1):
                 result.append((x, int(y0 + k * (x - x0))))
     elif algorithm == 'DDA':
-        pass
+        if x0 == x1 and y0 == y1:
+            result.append((x0,y0))
+        else:
+            if abs(y0 - y1) < abs(x0 - x1):
+                if x0 > x1:
+                    x0, y0, x1, y1 = x1, y1, x0, y0
+                k = (y1 - y0) / (x1 - x0)
+                for x in range(x0, x1 + 1):
+                    result.append((x, int(result[x - x0][1] + k)))
+            else:
+                if y0 > y1:
+                    x0, y0, x1, y1 = x1, y1, x0, y0
+                k = (x1 - x0) / (y1 - y0)
+                for y in range(y0, y1 + 1):
+                    result.append((int(result[y - y0][0] + k), y))
     elif algorithm == 'Bresenham':
-        pass
+        if x0 == x1:
+            if y0 > y1:
+                x0, y0, x1, y1 = x1, y1, x0, y0
+            for y in range(y0, y1+1):
+                result.append((x0, y))
+        elif y0 == y1:
+            if x0 > x1:
+                x0, y0, x1, y1 = x1, y1, x0, y0
+            for x in range(x0, x1 + 1):
+                result.append((x, y0))
+        elif x0 - x1 == y0 - y1:
+            if x0 > x1:
+                x0, y0, x1, y1 = x1, y1, x0, y0
+            for i in range(0, x1 - x0 + 1):
+                result.append(x0 + i, y0 + i)
+        elif x0 - x1 == y1 - y0:
+            if x0 > x1:
+                x0, y0, x1, y1 = x1, y1, x0, y0
+            for i in range(0, x1 - x0 + 1):
+                result.append((x0 + i, y0 - i))
+        elif abs(y0 - y1) < abs(x0 - x1):
+            if x0 > x1:
+                x0, y0, x1, y1 = x1, y1, x0, y0
+            dx = x1 - x0
+            dy = y1 - y0
+            d = 2 * (dy - dx)
+            p = dy + dy - dx
+            result.append((x0, y0))
+            y = y0
+            for x in range(x0, x1):
+                if p < 0:
+                    result.append((x + 1, y))
+                    p = p + dy + dy
+                else:
+                    result.append((x + 1, y + 1))
+                    y = y + 1
+                    p = p + d
+        elif abs(y0 - y1) > abs(x0 - x1):
+            if y0 > y1:
+                x0, y0, x1, y1 = x1, y1, x0, y0
+            dx = x1 - x0
+            dy = y1 - y0
+            d = 2 * (dx - dy)
+            p = dx + dx - dy
+            x = x0
+            for y in range(y0, y1):
+                if p < 0:
+                    result.append((x, y + 1))
+                    p = p + dx + dx
+                else:
+                    result.append((x + 1, y + 1))
+                    x = x + 1
+                    p = p + d
     return result
 
 

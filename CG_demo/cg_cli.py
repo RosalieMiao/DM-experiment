@@ -53,7 +53,19 @@ if __name__ == '__main__':
                 y1 = int(line[5])
                 algorithm = line[6]
                 item_dict[item_id] = ['line', [[x0, y0], [x1, y1]], algorithm, np.array(pen_color)]
-            ...
-
+            elif line[0] == 'drawPolygon':
+                pass
+            elif line[0] == 'drawEllipse':
+                pass
+            elif line[0] == 'drawCurve':
+                pass
+            elif line[0] == 'translate':
+                pass
+            elif line[0] == 'rotate':
+                pass
+            elif line[0] == 'scale':
+                pass
+            elif line[0] == 'clip':
+                pass
             line = fp.readline()
 
