@@ -62,7 +62,7 @@ def draw_line(p_list, algorithm):
             if x0 > x1:
                 x0, y0, x1, y1 = x1, y1, x0, y0
             for i in range(0, x1 - x0 + 1):
-                result.append(x0 + i, y0 + i)
+                result.append((x0 + i, y0 + i))
         elif x0 - x1 == y1 - y0:
             if x0 > x1:
                 x0, y0, x1, y1 = x1, y1, x0, y0
@@ -71,9 +71,10 @@ def draw_line(p_list, algorithm):
         elif abs(y0 - y1) < abs(x0 - x1):
             if x0 > x1:
                 x0, y0, x1, y1 = x1, y1, x0, y0
-            dx = x1 - x0
-            dy = y1 - y0
+            dx = abs(x1 - x0)
+            dy = abs(y1 - y0)
             d = 2 * (dy - dx)
+            t = int((y1 - y0) / dy)
             p = dy + dy - dx
             result.append((x0, y0))
             y = y0
@@ -82,15 +83,16 @@ def draw_line(p_list, algorithm):
                     result.append((x + 1, y))
                     p = p + dy + dy
                 else:
-                    result.append((x + 1, y + 1))
-                    y = y + 1
+                    result.append((x + 1, y + t))
+                    y = y + t
                     p = p + d
         elif abs(y0 - y1) > abs(x0 - x1):
             if y0 > y1:
                 x0, y0, x1, y1 = x1, y1, x0, y0
-            dx = x1 - x0
-            dy = y1 - y0
+            dx = abs(x1 - x0)
+            dy = abs(y1 - y0)
             d = 2 * (dx - dy)
+            t = int((x1 - x0) / dx)
             p = dx + dx - dy
             x = x0
             for y in range(y0, y1):
@@ -98,9 +100,10 @@ def draw_line(p_list, algorithm):
                     result.append((x, y + 1))
                     p = p + dx + dx
                 else:
-                    result.append((x + 1, y + 1))
-                    x = x + 1
+                    result.append((x + t, y + 1))
+                    x = x + t
                     p = p + d
+    #print('drawline: '+str(p_list) + ' ' + algorithm+' '+str(len(result)))
     return result
 
 
@@ -124,7 +127,54 @@ def draw_ellipse(p_list):
     :param p_list: (list of list of int: [[x0, y0], [x1, y1]]) 椭圆的矩形包围框左上角和右下角顶点坐标
     :return: (list of list of int: [[x_0, y_0], [x_1, y_1], [x_2, y_2], ...]) 绘制结果的像素点坐标列表
     """
-    pass
+    x0, y0 = p_list[0]
+    x1, y1 = p_list[1]
+    result = []
+    xc = (x0 + x1) / 2
+    yc = (y0 + y1) / 2
+    rx = abs(x0 - x1) / 2
+    ry = abs(y0 - y1) / 2
+    ry2 = ry * ry
+    rx2 = rx * rx
+    p1 = ry2 - rx2 * ry + ry2 / 4
+    x = 0
+    y = ry
+    result.append((int(xc), int(yc + ry)))
+    result.append((int(xc), int(yc - ry)))
+    while 2 * ry2 * x < 2 * rx2 * y:
+        if p1 < 0:
+            x += 1
+            result.append((int(xc + x), int(yc + y)))
+            result.append((int(xc + x), int(yc - y)))
+            result.append((int(xc - x), int(yc + y)))
+            result.append((int(xc - x), int(yc - y)))
+            p1 = p1 + 2 * ry2 * x + ry2
+        else:
+            y -= 1
+            x += 1
+            result.append((int(xc + x), int(yc + y)))
+            result.append((int(xc + x), int(yc - y)))
+            result.append((int(xc - x), int(yc + y)))
+            result.append((int(xc - x), int(yc - y)))
+            p1 = p1 + 2 * ry2 * x - 2 * rx2 * y + ry2
+    p2 = ry2 * (x + 0.5) * (x + 0.5) + rx2 * (y - 1) * (y - 1) - rx2 * ry2
+    while y > 0:
+        if p2 > 0:
+            y -= 1
+            result.append((int(xc + x), int(yc + y)))
+            result.append((int(xc + x), int(yc - y)))
+            result.append((int(xc - x), int(yc + y)))
+            result.append((int(xc - x), int(yc - y)))
+            p2 = p2 - 2 * rx2 * y + rx2
+        else:
+            x += 1
+            y -= 1
+            result.append((int(xc + x), int(yc + y)))
+            result.append((int(xc + x), int(yc - y)))
+            result.append((int(xc - x), int(yc + y)))
+            result.append((int(xc - x), int(yc - y)))
+            p2 = p2 + 2 * ry2 * x - 2 * rx2 * y + rx2
+    return result
 
 
 def draw_curve(p_list, algorithm):
@@ -145,7 +195,10 @@ def translate(p_list, dx, dy):
     :param dy: (int) 垂直方向平移量
     :return: (list of list of int: [[x_0, y_0], [x_1, y_1], [x_2, y_2], ...]) 变换后的图元参数
     """
-    pass
+    result = []
+    for i in range(len(p_list)):
+        result.append([p_list[i][0] + dx, p_list[i][1] + dy])
+    return result 
 
 
 def rotate(p_list, x, y, r):
@@ -157,7 +210,20 @@ def rotate(p_list, x, y, r):
     :param r: (int) 顺时针旋转角度（°）
     :return: (list of list of int: [[x_0, y_0], [x_1, y_1], [x_2, y_2], ...]) 变换后的图元参数
     """
-    pass
+    result = []
+    for i in range(len(p_list)):
+        x0 = p_list[i][0]
+        y0 = p_list[i][1]
+        if x0 == x and y0 == y:
+            result.append([x0, y0])
+            continue
+        r0 = ((x0 - x) * (x0 - x) + (y0 - y) * (y0 - y)) ** 0.5
+        w = cal_r(x0 - x, y0 - y)
+        w -= (math.pi * r / 180)
+        x1 = x + r0 * math.cos(w)
+        y1 = y + r0 * math.sin(w)
+        result.append([int(x1), int(y1)])
+    return result
 
 
 def scale(p_list, x, y, s):
@@ -169,7 +235,13 @@ def scale(p_list, x, y, s):
     :param s: (float) 缩放倍数
     :return: (list of list of int: [[x_0, y_0], [x_1, y_1], [x_2, y_2], ...]) 变换后的图元参数
     """
-    pass
+    result = []
+    for i in range(len(p_list)):
+        x0, y0 = p_list[i]
+        x1 = x + (x0 - x) * s
+        y1 = y + (y0 - y) * s
+        result.append([int(x1), int(y1)])
+    return result
 
 
 def clip(p_list, x_min, y_min, x_max, y_max, algorithm):
@@ -184,3 +256,26 @@ def clip(p_list, x_min, y_min, x_max, y_max, algorithm):
     :return: (list of list of int: [[x_0, y_0], [x_1, y_1]]) 裁剪后线段的起点和终点坐标
     """
     pass
+
+def cal_r(x, y):
+    """计算角度
+
+    :param x: x坐标
+    :param y: y坐标
+    :return r: (x, y)在极坐标下对应的弧度theta
+    """
+    if x == 0:
+        if y > 0:
+            return math.pi / 2
+        else:
+            return 3 * math.pi / 2
+    elif y == 0:
+        if x > 0:
+            return 0
+        else:
+            return math.pi
+    else:
+        if x < 0:
+            return math.atan(y / x) + math.pi
+        else:
+            return math.atan(y / x)

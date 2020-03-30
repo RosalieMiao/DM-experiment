@@ -1,0 +1,8 @@
+resetCanvas 600 500
+setColor 0 0 0
+drawLine t1 100 100 300 200 Bresenham
+saveCanvas 1
+translate t1 200 200
+saveCanvas 2
+rotate t1 400 350 90
+saveCanvas 3
