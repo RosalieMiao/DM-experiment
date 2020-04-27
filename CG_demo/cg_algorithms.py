@@ -184,7 +184,24 @@ def draw_curve(p_list, algorithm):
     :param algorithm: (string) 绘制使用的算法，包括'Bezier'和'B-spline'（三次均匀B样条曲线，曲线不必经过首末控制点）
     :return: (list of list of int: [[x_0, y_0], [x_1, y_1], [x_2, y_2], ...]) 绘制结果的像素点坐标列表
     """
-    pass
+    ret = []
+    if len(p_list) == 2:
+        return draw_line(p_list, "Bresenham")
+    if algorithm == "Bezier":
+        n = len(p_list)
+        for tu in range(0, 10000):
+            u = tu * 0.0001
+            p_bef = p_list.copy()
+            p_aft = []
+            for r in range(1, n):
+                p_aft = []
+                for i in range(0, n - r):
+                    p_aft.append([(1 - u) * p_bef[i][0] + u * p_bef[i + 1][0], (1 - u) * p_bef[i][1] + u * p_bef[i + 1][1]])
+                p_bef = p_aft.copy()
+            ret.append([int(p_aft[0][0]), int(p_aft[0][1])])
+    else:
+        pass
+    return ret
 
 
 def translate(p_list, dx, dy):
