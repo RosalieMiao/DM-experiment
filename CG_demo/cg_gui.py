@@ -38,6 +38,7 @@ class MyCanvas(QGraphicsView):
 
         self.temp_flag = 0
         self.temp_loc = [0, 0]
+        self.clip_loc = [0, 0]
         self.temp_list = []
         self.temp_r = 0
         self.temp_dis = 0
@@ -76,15 +77,19 @@ class MyCanvas(QGraphicsView):
 
     def start_scale(self):
         self.status = 'scale'
+    
+    def start_clip(self, algorithm):
+        self.status = 'clip'
+        self.temp_algorithm = algorithm
 
     def clear_selection(self):
-        print('clear_selection')
+        #print('clear_selection')
         if self.selected_id != '':
             self.item_dict[self.selected_id].selected = False
             self.selected_id = ''
 
     def selection_changed(self, selected):
-        print('selection_changed')
+        #print('selection_changed')
         self.main_window.statusBar().showMessage('图元选择： %s' % selected)
         if self.selected_id != '':
             self.item_dict[self.selected_id].selected = False
@@ -96,7 +101,7 @@ class MyCanvas(QGraphicsView):
         self.updateScene([self.sceneRect()])
 
     def mousePressEvent(self, event: QMouseEvent) -> None:
-        print('mousePressEvent')
+        #print('mousePressEvent')
         pos = self.mapToScene(event.localPos().toPoint())
         x = int(pos.x())
         y = int(pos.y())
@@ -123,12 +128,19 @@ class MyCanvas(QGraphicsView):
             self.scene().addItem(self.temp_item)
         elif self.status == 'curve':
             if self.temp_flag == 0:
-                self.temp_item = MyItem(self.temp_id, self.status, [[x, y], [x, y]], self.temp_algorithm)
+                if self.temp_algorithm == "Bezier":
+                    self.temp_item = MyItem(self.temp_id, self.status, [[x, y], [x, y]], self.temp_algorithm)
+                else:
+                    self.temp_item = MyItem(self.temp_id, self.status, [[x, y]], self.temp_algorithm)
                 self.scene().addItem(self.temp_item)
                 self.temp_flag = 1
             else:
-                self.temp_item.p_list.append(self.temp_item.p_list[len(self.temp_item.p_list) - 1])
-                self.temp_item.p_list[len(self.temp_item.p_list) - 2] = [x, y]
+                if self.temp_item.algorithm == "Bezier":
+                    self.temp_item.p_list.append(self.temp_item.p_list[len(self.temp_item.p_list) - 1])
+                    self.temp_item.p_list[len(self.temp_item.p_list) - 2] = [x, y]
+                else:
+                    self.temp_item.p_list.append([x, y])
+                    self.temp_item.p_list[len(self.temp_item.p_list) - 1] = [x, y]
         elif self.status == 'translate':
             self.temp_loc = [x, y]
         elif self.status == 'rotate':
@@ -139,6 +151,12 @@ class MyCanvas(QGraphicsView):
             self.temp_list = self.item_dict[self.selected_id].p_list
             self.temp_loc = self.item_dict[self.selected_id].center_loc
             self.temp_dis = ((x - self.temp_loc[0]) * (x - self.temp_loc[0]) + (y - self.temp_loc[1]) * (y - self.temp_loc[1])) ** 0.5
+        elif self.status == 'clip':
+            if self.selected_id == '':
+                print("Please choose one line before clipping.")
+            else:
+                #self.temp_list = self.item_dict[self.selected_id].p_list
+                self.temp_loc = [x, y]
         self.updateScene([self.sceneRect()])
         super().mousePressEvent(event)
 
@@ -171,11 +189,13 @@ class MyCanvas(QGraphicsView):
             r = (x0 * x0 + y0 * y0) ** 0.5
             self.item_dict[self.selected_id].p_list = alg.scale(self.temp_list, self.temp_loc[0], self.temp_loc[1], r / self.temp_dis)
             self.item_dict[self.selected_id].update()
+        elif self.status == 'clip':
+            self.clip_loc = [x, y]
         self.updateScene([self.sceneRect()])
         super().mouseMoveEvent(event)
     
     def mouseDoubleClickEvent(self, event: QMouseEvent) -> None:
-        print('mouseDoubleClick')
+        #print('mouseDoubleClick')
         if self.status == 'polygon':
             self.temp_flag = 0
             self.item_dict[self.temp_id] = self.temp_item
@@ -189,7 +209,7 @@ class MyCanvas(QGraphicsView):
         super().mouseDoubleClickEvent(event)
 
     def mouseReleaseEvent(self, event: QMouseEvent) -> None:
-        print('mouseReleaseEvent')
+        #print('mouseReleaseEvent')
         if self.status == 'line':
             self.item_dict[self.temp_id] = self.temp_item
             self.list_widget.addItem(self.temp_id)
@@ -206,6 +226,15 @@ class MyCanvas(QGraphicsView):
             self.temp_loc = [0, 0]
         elif self.status == 'rotate':
             self.temp_loc = [0, 0]
+        elif self.status == 'clip':
+            if self.selected_id != '':
+                x_min = min(self.temp_loc[0], self.clip_loc[0])
+                x_max = max(self.temp_loc[0], self.clip_loc[0])
+                y_min = min(self.temp_loc[1], self.clip_loc[1])
+                y_max = max(self.temp_loc[1], self.clip_loc[1])
+                self.item_dict[self.selected_id].p_list = alg.clip(self.item_dict[self.selected_id].p_list, x_min, y_min, x_max, y_max, self.temp_algorithm)
+                self.item_dict[self.selected_id].update()
+                self.updateScene([self.sceneRect()])
         super().mouseReleaseEvent(event)
 
 
@@ -223,7 +252,7 @@ class MyItem(QGraphicsItem):
         :param parent:
         """
         super().__init__(parent)
-        print('myitem init id: '+item_id)
+        #print('myitem init id: '+item_id)
         self.id = item_id           # 图元ID
         self.item_type = item_type  # 图元类型，'line'、'polygon'、'ellipse'、'curve'等
         self.p_list = p_list        # 图元参数
@@ -232,7 +261,6 @@ class MyItem(QGraphicsItem):
         self.center_loc = [0, 0]
 
     def paint(self, painter: QPainter, option: QStyleOptionGraphicsItem, widget: Optional[QWidget] = ...) -> None:
-        #print('paint')
         if self.item_type == 'line':
             item_pixels = alg.draw_line(self.p_list, self.algorithm)
             for p in item_pixels:
@@ -265,14 +293,17 @@ class MyItem(QGraphicsItem):
     def boundingRect(self) -> QRectF:
         #print('boundingRect')
         if self.item_type == 'line':
-            x0, y0 = self.p_list[0]
-            x1, y1 = self.p_list[1]
-            x = min(x0, x1)
-            y = min(y0, y1)
-            w = max(x0, x1) - x
-            h = max(y0, y1) - y
-            self.center_loc = (int(x + w / 2), int(y + h / 2))
-            return QRectF(x - 1, y - 1, w + 2, h + 2)
+            if self.p_list != []:
+                x0, y0 = self.p_list[0]
+                x1, y1 = self.p_list[1]
+                x = min(x0, x1)
+                y = min(y0, y1)
+                w = max(x0, x1) - x
+                h = max(y0, y1) - y
+                self.center_loc = (int(x + w / 2), int(y + h / 2))
+                return QRectF(x - 1, y - 1, w + 2, h + 2)
+            else:
+                return QRectF(0, 0, 0, 0)
         elif self.item_type == 'polygon':
             x0 = self.p_list[0][0]
             y0 = self.p_list[0][1]
@@ -313,7 +344,7 @@ class MainWindow(QMainWindow):
     """
     def __init__(self):
         super().__init__()
-        print('init')
+        #print('init')
         self.item_cnt = 0
 
         # 使用QListWidget来记录已有的图元，并用于选择图元。注：这是图元选择的简单实现方法，更好的实现是在画布中直接用鼠标选择图元
@@ -367,6 +398,8 @@ class MainWindow(QMainWindow):
         translate_act.triggered.connect(self.translate_action)
         rotate_act.triggered.connect(self.rotate_action)
         scale_act.triggered.connect(self.scale_action)
+        clip_cohen_sutherland_act.triggered.connect(self.clip_cohen_sutherland_action)
+        clip_liang_barsky_act.triggered.connect(self.clip_liang_barsky_action)
         self.list_widget.currentTextChanged.connect(self.canvas_widget.selection_changed)
 
         # 设置主窗口的布局
@@ -383,39 +416,39 @@ class MainWindow(QMainWindow):
     def get_id(self):
         self.item_cnt += 1
         _id = str(self.item_cnt)
-        print('in get_id, id is ' + str(self.item_cnt))
+        #print('in get_id, id is ' + str(self.item_cnt))
         return _id
 
     def line_naive_action(self):
-        print('line_naive_action')
+        #print('line_naive_action')
         self.canvas_widget.start_draw_line('Naive', str(self.item_cnt))
         self.statusBar().showMessage('Naive算法绘制线段')
         self.list_widget.clearSelection()
         self.canvas_widget.clear_selection()
 
     def line_dda_action(self):
-        print('line_dda_action')
+        #print('line_dda_action')
         self.canvas_widget.start_draw_line('DDA', str(self.item_cnt))
         self.statusBar().showMessage('DDA算法绘制线段')
         self.list_widget.clearSelection()
         self.canvas_widget.clear_selection()
 
     def line_bresenham_action(self):
-        print('line_bresenham_action')
+        #print('line_bresenham_action')
         self.canvas_widget.start_draw_line('Bresenham', str(self.item_cnt))
         self.statusBar().showMessage('Bresenham算法绘制线段')
         self.list_widget.clearSelection()
         self.canvas_widget.clear_selection()
 
     def polygon_dda_action(self):
-        print('polygon_dda_action')
+        #print('polygon_dda_action')
         self.canvas_widget.start_draw_polygon('DDA', str(self.item_cnt))
         self.statusBar().showMessage('DDA算法绘制多边形')
         self.list_widget.clearSelection()
         self.canvas_widget.clear_selection()
 
     def polygon_bresenham_action(self):
-        print('polygon_bresenham_action')
+        #print('polygon_bresenham_action')
         self.canvas_widget.start_draw_polygon('Bresenham', str(self.item_cnt))
         self.statusBar().showMessage('Bresenham算法绘制多边形')
         self.list_widget.clearSelection()
@@ -450,6 +483,14 @@ class MainWindow(QMainWindow):
     def scale_action(self):
         self.canvas_widget.start_scale()
         self.statusBar().showMessage('缩放')
+
+    def clip_cohen_sutherland_action(self):
+        self.canvas_widget.start_clip('Cohen-Sutherland')
+        self.statusBar().showMessage('Cohen-Sutherland算法裁剪')
+    
+    def clip_liang_barsky_action(self):
+        self.canvas_widget.start_clip('Liang-Barsky')
+        self.statusBar().showMessage('Liang-Barsky算法裁剪')
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)

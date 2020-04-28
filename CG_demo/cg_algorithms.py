@@ -12,6 +12,8 @@ def draw_line(p_list, algorithm):
     :param algorithm: (string) 绘制使用的算法，包括'DDA'和'Bresenham'，此处的'Naive'仅作为示例，测试时不会出现
     :return: (list of list of int: [[x_0, y_0], [x_1, y_1], [x_2, y_2], ...]) 绘制结果的像素点坐标列表
     """
+    if len(p_list) != 2:
+        return []
     x0, y0 = p_list[0]
     x1, y1 = p_list[1]
     result = []
@@ -103,7 +105,6 @@ def draw_line(p_list, algorithm):
                     result.append((x + t, y + 1))
                     x = x + t
                     p = p + d
-    #print('drawline: '+str(p_list) + ' ' + algorithm+' '+str(len(result)))
     return result
 
 
@@ -176,6 +177,14 @@ def draw_ellipse(p_list):
             p2 = p2 + 2 * ry2 * x - 2 * rx2 * y + rx2
     return result
 
+def cal_n(i, k, u):
+    if k == 1:
+        if u >= i * 1000 and u < (i + 1) * 1000:
+            return 1
+        else:
+            return 0
+    else:
+        return ((u - i * 1000) / ((k - 1) * 1000)) * cal_n(i, k - 1, u) + (((i + k) * 1000 - u) / ((k - 1) * 1000)) * cal_n(i + 1, k - 1, u)
 
 def draw_curve(p_list, algorithm):
     """绘制曲线
@@ -185,9 +194,11 @@ def draw_curve(p_list, algorithm):
     :return: (list of list of int: [[x_0, y_0], [x_1, y_1], [x_2, y_2], ...]) 绘制结果的像素点坐标列表
     """
     ret = []
-    if len(p_list) == 2:
-        return draw_line(p_list, "Bresenham")
+    if len(p_list) < 2:
+        return ret
     if algorithm == "Bezier":
+        if len(p_list) == 2:
+            return draw_line(p_list, "Bresenham")
         n = len(p_list)
         for tu in range(0, 10000):
             u = tu * 0.0001
@@ -200,7 +211,16 @@ def draw_curve(p_list, algorithm):
                 p_bef = p_aft.copy()
             ret.append([int(p_aft[0][0]), int(p_aft[0][1])])
     else:
-        pass
+        if len(p_list) < 4:
+            return ret
+        n = len(p_list)
+        for u in range(3000, n * 1000 + 1):
+            x, y = 0, 0
+            for i in range(0, n):
+                b = cal_n(i, 4, u)
+                x += b * p_list[i][0]
+                y += b * p_list[i][1]
+            ret.append([int(x), int(y)])
     return ret
 
 
@@ -272,7 +292,106 @@ def clip(p_list, x_min, y_min, x_max, y_max, algorithm):
     :param algorithm: (string) 使用的裁剪算法，包括'Cohen-Sutherland'和'Liang-Barsky'
     :return: (list of list of int: [[x_0, y_0], [x_1, y_1]]) 裁剪后线段的起点和终点坐标
     """
-    pass
+    if len(p_list) == 0:
+        return []
+    if algorithm == 'Cohen-Sutherland':
+        a = 0
+        b = 0
+        p1 = p_list[0]
+        p2 = p_list[1]
+        if p1[0] < x_min:
+            a += 1
+        if p1[0] > x_max:
+            a += (1 << 1)
+        if p1[1] < y_min:
+            a += (1 << 2)
+        if p1[1] > y_max:
+            a += (1 << 3)
+        if p2[0] < x_min:
+            b += 1
+        if p2[0] > x_max:
+            b += (1 << 1)
+        if p2[1] < y_min:
+            b += (1 << 2)
+        if p2[1] > y_max:
+            b += (1 << 3)
+        if a == 0 and b == 0:   # 线段完全在窗口边界内
+            return p_list
+        if a & b != 0:          # 线段完全在窗口外
+            return []
+        if p2[0] != p1[0]:
+            ty = (p2[0] - x_min) * (p1[1] - p2[1]) / (p2[0] - p1[0]) + p2[1] # 与左边的交点
+            if ty >= min(p1[1], p2[1]) and ty <= max(p1[1], p2[1]):
+                if p1[0] <= x_min:
+                    p1 = [x_min, int(ty)]
+                else:
+                    p2 = [x_min, int(ty)]
+        if p2[0] != p1[0]:
+            ty = (p2[0] - x_max) * (p1[1] - p2[1]) / (p2[0] - p1[0]) + p2[1] # 与右边的交点
+            if ty >= min(p1[1], p2[1]) and ty <= max(p1[1], p2[1]):
+                if p1[0] >= x_max:
+                    p1 = [x_max, int(ty)]
+                else:
+                    p2 = [x_max, int(ty)]
+        if max(p1[1], p2[1]) < y_min or min(p1[1], p2[1]) > y_max:
+            return []
+        if p1[1] != p2[1]:
+            tx = (y_max - p2[1]) * (p1[0] - p2[0]) / (p1[1] - p2[1]) + p2[0] # 与上边的交点
+            if tx >= min(p1[0], p2[0]) and tx <= max(p1[0], p2[0]):
+                if p1[1] >= y_max:
+                    p1 = [int(tx), y_max]
+                else:
+                    p2 = [int(tx), y_max]
+        if p1[1] != p2[1]:
+            tx = (y_min - p2[1]) * (p1[0] - p2[0]) / (p1[1] - p2[1]) + p2[0] # 与下边的交点
+            if tx >= min(p1[0], p2[0]) and tx <= max(p1[0], p2[0]):
+                if p1[1] <= y_min:
+                    p1 = [int(tx), y_min]
+                else:
+                    p2 = [int(tx), y_min]
+        return [p1, p2]
+    else:
+        p = []
+        dx = p_list[1][0] - p_list[0][0]
+        dy = p_list[1][1] - p_list[0][1]
+        p.append(- dx)
+        p.append(dx)
+        p.append(- dy)
+        p.append(dy)
+        q = []
+        q.append(p_list[0][0] - x_min)
+        q.append(x_max - p_list[0][0])
+        q.append(p_list[0][1] - y_min)
+        q.append(y_max - p_list[0][1])
+        if p[0] == 0:
+            if q[0] < 0:
+                return []
+            p_max = max(p_list[0][1], p_list[1][1])
+            p_min = min(p_list[0][1], p_list[1][1])
+            if p_max < y_min or p_min > y_max:
+                return []
+            else:
+                return [[p_list[0][0], max(p_min, y_min)], [p_list[0][0], min(p_max, y_max)]]
+        if p[2] == 0:
+            if q[2] < 0:
+                return []
+            p_max = max(p_list[0][0], p_list[1][0])
+            p_min = min(p_list[0][0], p_list[1][0])
+            if p_max < x_min or p_min > x_max:
+                return []
+            else:
+                return [[max(p_min, x_min), p_list[0][1]], [min(p_max, x_max), p_list[0][1]]]
+        u1, u2 = 0, 1
+        for i in range(0, 4):
+            if p[i] < 0: #入边交点
+                u1 = max(u1, q[i] / p[i])
+            else: #出边交点
+                u2 = min(u2, q[i] / p[i])
+        if u1 > u2:
+            return []
+        else:
+            return [[int(p_list[0][0] + u1 * dx), int(p_list[0][1] + u1 * dy)], [int(p_list[0][0] + u2 * dx), int(p_list[0][1] + u2 * dy)]] 
+
 
 def cal_r(x, y):
     """计算角度
