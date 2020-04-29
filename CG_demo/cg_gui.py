@@ -112,7 +112,7 @@ class MyCanvas(QGraphicsView):
             if self.temp_flag == 0:
                 self.temp_item = MyItem(self.temp_id, self.status, [[x, y], [x, y]], self.temp_algorithm)
                 self.scene().addItem(self.temp_item)
-                self.temp_flag = 1
+                #self.temp_flag = 1
             else:
                 #点在开始点的领域，多边形绘制结束
                 if abs(x - self.temp_item.p_list[0][0]) <= 10 and abs(y - self.temp_item.p_list[0][1]) <= 10:
@@ -172,7 +172,10 @@ class MyCanvas(QGraphicsView):
         elif self.status == 'ellipse':
             self.temp_item.p_list[1] = [x, y]
         elif self.status == 'curve':
-            self.temp_item.p_list[len(self.temp_item.p_list) - 1] = [x, y]
+            if self.temp_flag == 0:
+                self.temp_item.p_list[len(self.temp_item.p_list) - 1] = [x, y]
+            else:
+                self.temp_item.p_list[len(self.temp_item.p_list) - 2] = [x, y]
         elif self.status == 'translate':
             self.item_dict[self.selected_id].p_list = alg.translate(self.item_dict[self.selected_id].p_list, x - self.temp_loc[0], y - self.temp_loc[1])
             self.item_dict[self.selected_id].update()
@@ -221,7 +224,8 @@ class MyCanvas(QGraphicsView):
             self.list_widget.addItem(self.temp_id)
             self.finish_draw()
         elif self.status == 'curve':
-            pass #不需要有动作
+            if self.temp_flag == 0:
+                self.temp_flag = 1
         elif self.status == 'translate':
             self.temp_loc = [0, 0]
         elif self.status == 'rotate':
