@@ -14,7 +14,8 @@ from PyQt5.QtWidgets import (
     QListWidget,
     QHBoxLayout,
     QWidget,
-    QStyleOptionGraphicsItem)
+    QStyleOptionGraphicsItem,
+    QInputDialog)
 from PyQt5.QtGui import QPainter, QMouseEvent, QColor
 from PyQt5.QtCore import QRectF
 import math
@@ -42,6 +43,8 @@ class MyCanvas(QGraphicsView):
         self.temp_list = []
         self.temp_r = 0
         self.temp_dis = 0
+        
+        self.color = QColor(0, 0, 0)
 
     def start_draw_line(self, algorithm, item_id):
         #print('start_draw_line')
@@ -106,13 +109,13 @@ class MyCanvas(QGraphicsView):
         x = int(pos.x())
         y = int(pos.y())
         if self.status == 'line':
-            self.temp_item = MyItem(self.temp_id, self.status, [[x, y], [x, y]], self.temp_algorithm)
+            self.temp_item = MyItem(self.temp_id, self.status, [[x, y], [x, y]], self.temp_algorithm, self.color)
             self.scene().addItem(self.temp_item)
         elif self.status == 'polygon':
             if self.temp_flag == 0:
-                self.temp_item = MyItem(self.temp_id, self.status, [[x, y], [x, y]], self.temp_algorithm)
+                self.temp_item = MyItem(self.temp_id, self.status, [[x, y], [x, y]], self.temp_algorithm, self.color)
                 self.scene().addItem(self.temp_item)
-                #self.temp_flag = 1
+                self.temp_flag = 1
             else:
                 #点在开始点的领域，多边形绘制结束
                 if abs(x - self.temp_item.p_list[0][0]) <= 10 and abs(y - self.temp_item.p_list[0][1]) <= 10:
@@ -124,14 +127,14 @@ class MyCanvas(QGraphicsView):
                     self.temp_item.p_list.append([x,y])
                     self.temp_item.p_list[len(self.temp_item.p_list) - 1] = [x, y]
         elif self.status == 'ellipse':
-            self.temp_item = MyItem(self.temp_id, self.status, [[x, y], [x, y]], self.temp_algorithm)
+            self.temp_item = MyItem(self.temp_id, self.status, [[x, y], [x, y]], self.temp_algorithm, self.color)
             self.scene().addItem(self.temp_item)
         elif self.status == 'curve':
             if self.temp_flag == 0:
                 if self.temp_algorithm == "Bezier":
-                    self.temp_item = MyItem(self.temp_id, self.status, [[x, y], [x, y]], self.temp_algorithm)
+                    self.temp_item = MyItem(self.temp_id, self.status, [[x, y], [x, y]], self.temp_algorithm, self.color)
                 else:
-                    self.temp_item = MyItem(self.temp_id, self.status, [[x, y]], self.temp_algorithm)
+                    self.temp_item = MyItem(self.temp_id, self.status, [[x, y]], self.temp_algorithm, self.color)
                 self.scene().addItem(self.temp_item)
                 self.temp_flag = 1
             else:
@@ -241,12 +244,15 @@ class MyCanvas(QGraphicsView):
                 self.updateScene([self.sceneRect()])
         super().mouseReleaseEvent(event)
 
+    def set_color(self, color: QColor):
+        self.color = color
+
 
 class MyItem(QGraphicsItem):
     """
     自定义图元类，继承自QGraphicsItem
     """
-    def __init__(self, item_id: str, item_type: str, p_list: list, algorithm: str = '', parent: QGraphicsItem = None):
+    def __init__(self, item_id: str, item_type: str, p_list: list, algorithm: str = '', color: QColor = QColor(0, 0, 0), parent: QGraphicsItem = None):
         """
 
         :param item_id: 图元ID
@@ -263,11 +269,13 @@ class MyItem(QGraphicsItem):
         self.algorithm = algorithm  # 绘制算法，'DDA'、'Bresenham'、'Bezier'、'B-spline'等
         self.selected = False
         self.center_loc = [0, 0]
+        self.color = color
 
     def paint(self, painter: QPainter, option: QStyleOptionGraphicsItem, widget: Optional[QWidget] = ...) -> None:
         if self.item_type == 'line':
             item_pixels = alg.draw_line(self.p_list, self.algorithm)
             for p in item_pixels:
+                painter.setPen(self.color)
                 painter.drawPoint(*p)
             if self.selected:
                 painter.setPen(QColor(255, 0, 0))
@@ -275,6 +283,7 @@ class MyItem(QGraphicsItem):
         elif self.item_type == 'polygon':
             item_pixels = alg.draw_polygon(self.p_list, self.algorithm)
             for p in item_pixels:
+                painter.setPen(self.color)
                 painter.drawPoint(*p)
             if self.selected:
                 painter.setPen(QColor(255, 0, 0))
@@ -282,6 +291,7 @@ class MyItem(QGraphicsItem):
         elif self.item_type == 'ellipse':
             item_pixels = alg.draw_ellipse(self.p_list)
             for p in item_pixels:
+                painter.setPen(self.color)
                 painter.drawPoint(*p)
             if self.selected:
                 painter.setPen(QColor(255, 0, 0))
@@ -289,6 +299,7 @@ class MyItem(QGraphicsItem):
         elif self.item_type == 'curve':
             item_pixels = alg.draw_curve(self.p_list, self.algorithm)
             for p in item_pixels:
+                painter.setPen(self.color)
                 painter.drawPoint(*p)
             if self.selected:
                 painter.setPen(QColor(255, 0, 0))
@@ -342,6 +353,7 @@ class MyItem(QGraphicsItem):
             self.center_loc = (int((x0 + x1) / 2), int((y0 + y1) / 2))
             return QRectF(x0 - 1, y0 - 1, x1 - x0 + 2, y1 - y0 + 2)
 
+
 class MainWindow(QMainWindow):
     """
     主窗口类
@@ -350,6 +362,7 @@ class MainWindow(QMainWindow):
         super().__init__()
         #print('init')
         self.item_cnt = 0
+        self.canvas_cnt = 1
 
         # 使用QListWidget来记录已有的图元，并用于选择图元。注：这是图元选择的简单实现方法，更好的实现是在画布中直接用鼠标选择图元
         self.list_widget = QListWidget(self)
@@ -368,6 +381,7 @@ class MainWindow(QMainWindow):
         file_menu = menubar.addMenu('文件')
         set_pen_act = file_menu.addAction('设置画笔')
         reset_canvas_act = file_menu.addAction('重置画布')
+        save_canvas_act = file_menu.addAction('保存画布')
         exit_act = file_menu.addAction('退出')
         draw_menu = menubar.addMenu('绘制')
         line_menu = draw_menu.addMenu('线段')
@@ -391,6 +405,9 @@ class MainWindow(QMainWindow):
 
         # 连接信号和槽函数
         exit_act.triggered.connect(qApp.quit)
+        set_pen_act.triggered.connect(self.set_pen)
+        reset_canvas_act.triggered.connect(self.reset_canvas)
+        save_canvas_act.triggered.connect(self.save_canvas)
         line_naive_act.triggered.connect(self.line_naive_action)
         line_dda_act.triggered.connect(self.line_dda_action)
         line_bresenham_act.triggered.connect(self.line_bresenham_action)
@@ -415,13 +432,35 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(self.central_widget)
         self.statusBar().showMessage('空闲')
         self.resize(600, 600)
-        self.setWindowTitle('CG Demo')
+        self.setWindowTitle('CG 171860004')
 
     def get_id(self):
         self.item_cnt += 1
         _id = str(self.item_cnt)
         #print('in get_id, id is ' + str(self.item_cnt))
         return _id
+    
+    def set_pen(self):
+        red, ok1 = QInputDialog.getInt(self, "设置画笔颜色", "RED:")
+        green, ok2 = QInputDialog.getInt(self, "设置画笔颜色", "GREEN:")
+        blue, ok3 = QInputDialog.getInt(self, "设置画笔颜色", "BLUE:")
+        if ok1 and ok2 and ok3:
+            self.canvas_widget.set_color(QColor(red, green, blue))
+
+    def reset_canvas(self):
+        width, ok1 = QInputDialog.getInt(self, "重置画布", "width:")
+        height, ok2 = QInputDialog.getInt(self, "重置画布", "height:")
+        if ok1 and ok2:
+            self.scene.clear()
+            self.scene.setSceneRect(0, 0, width, height)
+            self.canvas_widget.setFixedSize(width, height)
+
+
+    def save_canvas(self):
+        img = self.canvas_widget.grab()
+        file_name = "output/"+str(self.canvas_cnt)+".bmp"
+        self.canvas_cnt = self.canvas_cnt + 1
+        img.save(file_name)
 
     def line_naive_action(self):
         #print('line_naive_action')

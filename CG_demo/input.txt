@@ -3,3 +3,7 @@ setColor 255 0 0
 drawLine line1 100 300 300 100 Bresenham
 clip line1 100 100 200 250 Cohen-Sutherland
 saveCanvas 1
+resetCanvas 500 500
+setColor 255 255 0
+drawLine line2 100 100 200 200 Bresenham
+saveCanvas 2
