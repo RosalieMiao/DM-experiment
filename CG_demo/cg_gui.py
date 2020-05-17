@@ -92,7 +92,6 @@ class MyCanvas(QGraphicsView):
             self.selected_id = ''
 
     def selection_changed(self, selected):
-        #print('selection_changed')
         self.main_window.statusBar().showMessage('图元选择： %s' % selected)
         if self.selected_id != '':
             self.item_dict[self.selected_id].selected = False
@@ -104,7 +103,6 @@ class MyCanvas(QGraphicsView):
         self.updateScene([self.sceneRect()])
 
     def mousePressEvent(self, event: QMouseEvent) -> None:
-        #print('mousePressEvent')
         pos = self.mapToScene(event.localPos().toPoint())
         x = int(pos.x())
         y = int(pos.y())
@@ -164,7 +162,6 @@ class MyCanvas(QGraphicsView):
         super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event: QMouseEvent) -> None:
-        #print('mouseMoveEvent')
         pos = self.mapToScene(event.localPos().toPoint())
         x = int(pos.x())
         y = int(pos.y())
@@ -201,7 +198,6 @@ class MyCanvas(QGraphicsView):
         super().mouseMoveEvent(event)
     
     def mouseDoubleClickEvent(self, event: QMouseEvent) -> None:
-        #print('mouseDoubleClick')
         if self.status == 'polygon':
             self.temp_flag = 0
             self.item_dict[self.temp_id] = self.temp_item
@@ -227,8 +223,7 @@ class MyCanvas(QGraphicsView):
             self.list_widget.addItem(self.temp_id)
             self.finish_draw()
         elif self.status == 'curve':
-            if self.temp_flag == 0:
-                self.temp_flag = 1
+            pass #不需要有动作
         elif self.status == 'translate':
             self.temp_loc = [0, 0]
         elif self.status == 'rotate':
@@ -437,8 +432,8 @@ class MainWindow(QMainWindow):
     def get_id(self):
         self.item_cnt += 1
         _id = str(self.item_cnt)
-        #print('in get_id, id is ' + str(self.item_cnt))
         return _id
+
     
     def set_pen(self):
         red, ok1 = QInputDialog.getInt(self, "设置画笔颜色", "RED:")
@@ -447,51 +442,53 @@ class MainWindow(QMainWindow):
         if ok1 and ok2 and ok3:
             self.canvas_widget.set_color(QColor(red, green, blue))
 
+
     def reset_canvas(self):
         width, ok1 = QInputDialog.getInt(self, "重置画布", "width:")
         height, ok2 = QInputDialog.getInt(self, "重置画布", "height:")
         if ok1 and ok2:
+            self.list_widget.disconnect()
+            self.list_widget.clear()
             self.scene.clear()
+            self.list_widget.currentTextChanged.connect(self.canvas_widget.selection_changed)
+            self.item_cnt = 0
             self.scene.setSceneRect(0, 0, width, height)
             self.canvas_widget.setFixedSize(width, height)
 
 
     def save_canvas(self):
+        self.list_widget.clearSelection()
+        self.canvas_widget.clear_selection()
         img = self.canvas_widget.grab()
         file_name = "output/"+str(self.canvas_cnt)+".bmp"
         self.canvas_cnt = self.canvas_cnt + 1
         img.save(file_name)
 
     def line_naive_action(self):
-        #print('line_naive_action')
         self.canvas_widget.start_draw_line('Naive', str(self.item_cnt))
         self.statusBar().showMessage('Naive算法绘制线段')
         self.list_widget.clearSelection()
         self.canvas_widget.clear_selection()
 
     def line_dda_action(self):
-        #print('line_dda_action')
         self.canvas_widget.start_draw_line('DDA', str(self.item_cnt))
         self.statusBar().showMessage('DDA算法绘制线段')
         self.list_widget.clearSelection()
         self.canvas_widget.clear_selection()
 
     def line_bresenham_action(self):
-        #print('line_bresenham_action')
         self.canvas_widget.start_draw_line('Bresenham', str(self.item_cnt))
         self.statusBar().showMessage('Bresenham算法绘制线段')
         self.list_widget.clearSelection()
         self.canvas_widget.clear_selection()
 
     def polygon_dda_action(self):
-        #print('polygon_dda_action')
         self.canvas_widget.start_draw_polygon('DDA', str(self.item_cnt))
         self.statusBar().showMessage('DDA算法绘制多边形')
         self.list_widget.clearSelection()
         self.canvas_widget.clear_selection()
 
     def polygon_bresenham_action(self):
-        #print('polygon_bresenham_action')
         self.canvas_widget.start_draw_polygon('Bresenham', str(self.item_cnt))
         self.statusBar().showMessage('Bresenham算法绘制多边形')
         self.list_widget.clearSelection()
