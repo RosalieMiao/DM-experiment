@@ -433,15 +433,13 @@ class MainWindow(QMainWindow):
         self.item_cnt += 1
         _id = str(self.item_cnt)
         return _id
-
-    
+ 
     def set_pen(self):
         red, ok1 = QInputDialog.getInt(self, "设置画笔颜色", "RED:")
         green, ok2 = QInputDialog.getInt(self, "设置画笔颜色", "GREEN:")
         blue, ok3 = QInputDialog.getInt(self, "设置画笔颜色", "BLUE:")
         if ok1 and ok2 and ok3:
             self.canvas_widget.set_color(QColor(red, green, blue))
-
 
     def reset_canvas(self):
         width, ok1 = QInputDialog.getInt(self, "重置画布", "width:")
@@ -454,7 +452,6 @@ class MainWindow(QMainWindow):
             self.item_cnt = 0
             self.scene.setSceneRect(0, 0, width, height)
             self.canvas_widget.setFixedSize(width, height)
-
 
     def save_canvas(self):
         self.list_widget.clearSelection()
