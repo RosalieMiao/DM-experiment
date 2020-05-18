@@ -53,7 +53,8 @@ class MyCanvas(QGraphicsView):
         self.temp_id = item_id
 
     def finish_draw(self):
-        #print('finish_draw')
+        self.temp_flag = 0
+        self.status = ''
         self.temp_id = self.main_window.get_id()
     
     def start_draw_polygon(self, algorithm, item_id):
@@ -129,19 +130,12 @@ class MyCanvas(QGraphicsView):
             self.scene().addItem(self.temp_item)
         elif self.status == 'curve':
             if self.temp_flag == 0:
-                if self.temp_algorithm == "Bezier":
-                    self.temp_item = MyItem(self.temp_id, self.status, [[x, y], [x, y]], self.temp_algorithm, self.color)
-                else:
-                    self.temp_item = MyItem(self.temp_id, self.status, [[x, y]], self.temp_algorithm, self.color)
+                self.temp_item = MyItem(self.temp_id, self.status, [[x, y]], self.temp_algorithm, self.color)
                 self.scene().addItem(self.temp_item)
                 self.temp_flag = 1
             else:
-                if self.temp_item.algorithm == "Bezier":
-                    self.temp_item.p_list.append(self.temp_item.p_list[len(self.temp_item.p_list) - 1])
-                    self.temp_item.p_list[len(self.temp_item.p_list) - 2] = [x, y]
-                else:
-                    self.temp_item.p_list.append([x, y])
-                    self.temp_item.p_list[len(self.temp_item.p_list) - 1] = [x, y]
+                self.temp_item.p_list.append([x, y])
+                self.temp_item.p_list[len(self.temp_item.p_list) - 1] = [x, y]
         elif self.status == 'translate':
             self.temp_loc = [x, y]
         elif self.status == 'rotate':
@@ -156,7 +150,6 @@ class MyCanvas(QGraphicsView):
             if self.selected_id == '':
                 print("Please choose one line before clipping.")
             else:
-                #self.temp_list = self.item_dict[self.selected_id].p_list
                 self.temp_loc = [x, y]
         self.updateScene([self.sceneRect()])
         super().mousePressEvent(event)
@@ -172,10 +165,7 @@ class MyCanvas(QGraphicsView):
         elif self.status == 'ellipse':
             self.temp_item.p_list[1] = [x, y]
         elif self.status == 'curve':
-            if self.temp_flag == 0:
-                self.temp_item.p_list[len(self.temp_item.p_list) - 1] = [x, y]
-            else:
-                self.temp_item.p_list[len(self.temp_item.p_list) - 2] = [x, y]
+            self.temp_item.p_list[len(self.temp_item.p_list) - 1] = [x, y]
         elif self.status == 'translate':
             self.item_dict[self.selected_id].p_list = alg.translate(self.item_dict[self.selected_id].p_list, x - self.temp_loc[0], y - self.temp_loc[1])
             self.item_dict[self.selected_id].update()
@@ -199,12 +189,10 @@ class MyCanvas(QGraphicsView):
     
     def mouseDoubleClickEvent(self, event: QMouseEvent) -> None:
         if self.status == 'polygon':
-            self.temp_flag = 0
             self.item_dict[self.temp_id] = self.temp_item
             self.list_widget.addItem(self.temp_id)
             self.finish_draw()
         if self.status == 'curve':
-            self.temp_flag = 0
             self.item_dict[self.temp_id] = self.temp_item
             self.list_widget.addItem(self.temp_id)
             self.finish_draw()
@@ -446,7 +434,9 @@ class MainWindow(QMainWindow):
     def reset_canvas(self):
         width, ok1 = QInputDialog.getInt(self, "重置画布", "width:")
         height, ok2 = QInputDialog.getInt(self, "重置画布", "height:")
-        if ok1 and ok2:
+        if ok1 and ok2 and width >= 100 and width <= 1000 and height >= 100 and height <= 1000:
+            if self.canvas_widget.status == '':
+                self.canvas_widget.finish_draw()
             self.list_widget.disconnect()
             self.list_widget.clear()
             self.scene.clear()

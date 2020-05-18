@@ -194,11 +194,11 @@ def draw_curve(p_list, algorithm):
     :return: (list of list of int: [[x_0, y_0], [x_1, y_1], [x_2, y_2], ...]) 绘制结果的像素点坐标列表
     """
     ret = []
-    if len(p_list) < 2:
+    if len(p_list) < 3:
         return ret
     if algorithm == "Bezier":
-        if len(p_list) == 2:
-            return draw_line(p_list, "Bresenham")
+        # if len(p_list) == 2:
+        #     return draw_line(p_list, "Bresenham")
         n = len(p_list)
         for tu in range(0, 10000):
             u = tu * 0.0001
