@@ -345,7 +345,7 @@ class MainWindow(QMainWindow):
         super().__init__()
         #print('init')
         self.item_cnt = 0
-        self.canvas_cnt = 1
+        # self.canvas_cnt = 1
 
         # 使用QListWidget来记录已有的图元，并用于选择图元。注：这是图元选择的简单实现方法，更好的实现是在画布中直接用鼠标选择图元
         self.list_widget = QListWidget(self)
@@ -355,7 +355,7 @@ class MainWindow(QMainWindow):
         self.scene = QGraphicsScene(self)
         self.scene.setSceneRect(0, 0, 600, 600)
         self.canvas_widget = MyCanvas(self.scene, self)
-        self.canvas_widget.setFixedSize(600, 600)
+        self.canvas_widget.setFixedSize(610, 610)
         self.canvas_widget.main_window = self
         self.canvas_widget.list_widget = self.list_widget
 
@@ -432,8 +432,16 @@ class MainWindow(QMainWindow):
     def reset_canvas(self):
         width, ok1 = QInputDialog.getInt(self, "重置画布", "width:")
         height, ok2 = QInputDialog.getInt(self, "重置画布", "height:")
-        if ok1 and ok2 and width >= 100 and width <= 1000 and height >= 100 and height <= 1000:
-            if self.canvas_widget.status == '':
+        if width < 100:
+            width = 100
+        if width > 1000:
+            width = 1000
+        if height < 100:
+            height = 100
+        if height > 1000:
+            height = 1000
+        if ok1 and ok2:
+            if self.canvas_widget.status != '':
                 self.canvas_widget.finish_draw()
             self.list_widget.disconnect()
             self.list_widget.clear()
@@ -441,15 +449,17 @@ class MainWindow(QMainWindow):
             self.list_widget.currentTextChanged.connect(self.canvas_widget.selection_changed)
             self.item_cnt = 0
             self.scene.setSceneRect(0, 0, width, height)
-            self.canvas_widget.setFixedSize(width, height)
+            self.canvas_widget.setFixedSize(width + 10, height + 10)
 
     def save_canvas(self):
         self.list_widget.clearSelection()
         self.canvas_widget.clear_selection()
         img = self.canvas_widget.grab()
-        file_name = "output/"+str(self.canvas_cnt)+".bmp"
-        self.canvas_cnt = self.canvas_cnt + 1
-        img.save(file_name)
+        name, ok = QInputDialog.getText(self, "保存画布", "文件名：")
+        if ok:
+            file_name = "output/"+name+".bmp"
+            # self.canvas_cnt = self.canvas_cnt + 1
+            img.save(file_name)
 
     def line_naive_action(self):
         self.canvas_widget.start_draw_line('Naive', str(self.item_cnt))
